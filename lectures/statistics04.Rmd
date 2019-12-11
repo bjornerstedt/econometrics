@@ -1,0 +1,405 @@
+---
+author: "Jonas Björnerstedt"
+title: "Econometrics - Lecture 4"
+subtitle: "Hypothesis Tests and Confidence Intervals"
+date: '`r Sys.Date()`'
+output:
+    ioslides_presentation:
+        css: slides.css
+runtime: shiny
+...
+
+```{r setup, include=FALSE}
+library(tidyverse)
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(shinyPresentation = TRUE)
+library(knitr)
+library(shiny)
+library(png)
+library(grid)
+library(gridExtra)
+library(haven)
+library(huxtable)
+library(estimatr)
+set.seed(423)
+```
+
+
+## Lecture Content
+
+1. Dummy variables
+1. OLS derivations
+2. Heteroscedasticity
+3. Testing
+
+- Chapter 3 on testing
+- Chapter 5: Hypotheis tests and confidence intervals
+
+- Not included in course:
+    - 5.5 Theoretical foundations of OLS
+    - 5.6 Using the t-statistic
+
+
+# Dummy variables
+
+```{r}
+obs = 6
+exdata = tibble(
+        i = 1:obs,
+        X = round(2*rnorm(obs) + 4, 2 ), 
+        Y = round(X + 1 + rnorm(obs), 2)
+    ) 
+
+exdata2 = exdata %>% 
+    rename(X1 = X) %>% 
+    mutate(
+        X0 = 1L
+    ) %>% 
+    select(i, X1, X0, Y)
+
+exdata_dummy = tibble(
+        i = 1:obs,
+        u = rnorm(obs)
+    ) %>%
+    mutate(
+        X1 = if_else(i <= obs/2, 1L, 0L),
+        X0 = 1L,
+        Y = round(X1 + 1 + u, 2)
+    ) %>% select(-u)
+
+regr_table = function(df, b0 = .5, b1 = .9){
+df = df %>% 
+    mutate(
+        `Yhat = beta1*X + beta0` = sprintf("%.2f * %.2f + %.2f", b1, X, b0),
+        uhat = Y - b1 * X - b0,
+        Yhat =  b1 * X + b0,
+        `uhat = Y - Yhat` = uhat, 
+        SSR = if_else(i == 1, sum(uhat^2), NA_real_)
+    ) %>% select(-uhat)
+}
+
+regr_table2 = function(df, b0 = .5, b1 = .9){
+df = df %>% 
+    mutate(
+        `Yhat = beta1*X0 + beta0*X0` = sprintf("%.2f * %.2f + %.2f * %.2f", b1, X1, b0, X0),
+        uhat = Y - b1 * X1 - b0 * X0,
+        Yhat =  b1 * X1 + b0 * X0,
+        `uhat = Y - Yhat` = uhat, 
+        SSR = if_else(i == 1, sum(uhat^2), NA_real_)
+    ) %>% select(-uhat)
+}
+```
+
+## Regression, yet again
+
+```{r}
+shinyApp(
+    ui = fluidPage(
+        inputPanel(
+            sliderInput("beta1", label = "beta1:",
+                min = 0, max = 2, value = 0, step = .1),
+            sliderInput("beta0", label = "beta0:",
+                min = 0, max = 2, value = 0, step = .1)
+        ),
+        tableOutput('table')
+    ),
+    server = function(input, output) {
+        output$table <- renderTable(regr_table(exdata, b0 = input$beta0, b1 = input$beta1),
+            na = " ")
+    }
+)
+
+```
+
+## The constant as a regressor
+
+```{r}
+shinyApp(
+    ui = fluidPage(
+        inputPanel(
+            sliderInput("beta1", label = "beta1:",
+                min = 0, max = 2, value = 0, step = .1),
+            sliderInput("beta0", label = "beta0:",
+                min = 0, max = 2, value = 0, step = .1)
+            ),
+        tableOutput('table')
+    ),
+    server = function(input, output) {
+        output$table <- renderTable(regr_table2(exdata2, b0 = input$beta0, b1 = input$beta1),
+            na = " ")
+    }
+)
+
+```
+
+## Two averages
+
+```{r}
+shinyApp(
+    ui = fluidPage(
+        inputPanel(
+            sliderInput("beta1", label = "beta1:",
+                min = 0, max = 2, value = 0, step = .1),
+            sliderInput("beta0", label = "beta0:",
+                min = 0, max = 2, value = 0, step = .1)
+            ),
+        tableOutput('table')
+    ),
+    server = function(input, output) {
+        output$table <- renderTable(regr_table2(exdata_dummy %>% mutate(X0 = 1L - X1), 
+            b0 = input$beta0, b1 = input$beta1),
+            na = " ")
+    }
+)
+
+```
+
+## Dummy variable
+
+```{r}
+shinyApp(
+    ui = fluidPage(
+        inputPanel(
+            sliderInput("beta1", label = "beta1:",
+                min = 0, max = 2, value = 0, step = .1),
+            sliderInput("beta0", label = "beta0:",
+                min = 0, max = 2, value = 0, step = .1)
+            ),
+        tableOutput('table')
+    ),
+    server = function(input, output) {
+        output$table <- renderTable(regr_table2(exdata_dummy, b0 = input$beta0, b1 = input$beta1),
+            na = " ")
+    }
+)
+
+```
+
+## Dummy variable regression
+
+- Line from mean for $female = 0$ to mean for $female = 1$
+- Slope corresponds to the lower average wage for women
+
+```{r , echo=FALSE, warning=FALSE}
+library(haven)
+employment_06_07 = read_rds(url("http://bjornerstedt.org/econometrics/employment_06_07.rds"))
+
+ggplot(employment_06_07, aes(female, earnwke)) + 
+    # geom_jitter(width = 0.25) + 
+    geom_point() + 
+    geom_smooth(method = "lm", color ="red", se= FALSE) +
+    scale_x_continuous(breaks = 0:1)
+
+```
+
+## Dummy variable regression
+
+- Same plot using _jitter_ (moving points slightly horizontally)
+- Data points overlap less if distplayed slightly moved
+
+```{r , echo=FALSE, warning=FALSE}
+# employment_06_07 <- read_dta("employment_06_07.dta")
+
+ggplot(employment_06_07, aes(female, earnwke)) + 
+    geom_jitter(width = 0.1) +
+    geom_smooth(method = "lm", color ="red", se= FALSE) +
+    scale_x_continuous(breaks = 0:1)
+
+```
+
+## Empirical exercise
+
+- Open `employment_06_07.rds`:
+- Compare average for population and for female
+
+```{r, echo=TRUE, eval=FALSE}
+employment = read_rds(url("http://bjornerstedt.org/econometrics/employment_06_07.rds"))
+lm(earnwke~1, data = employment)
+summary(employment$earnwke)
+empf = filter(employment, female == 1)
+lm(earnwke~female, data = employment)
+lm(earnwke~female, data = empf)
+summary(empf$earnwke)
+```
+
+
+# OLS
+
+## OLS calculations
+
+- Population equation: $Y_i = \beta_0 + \beta_1 X_i + u_i$
+- we have $E(Y_i) = E(\beta_0 +\beta_1 X_i + u_i) = \beta_0 +\beta_1 E(X_i) + E(u_i)$
+- Can assume that $E(u_i) = 0$, as $\beta_0$ captures the constant part of the conditional expectation  
+
+- We thus have $E(Y_i) = \beta_0 +\beta_1 E(X_i)$
+
+- OLS assumption: $X_i$ is uncorrelated with $u_i$, i.e. $E(X_iu_i) = 0$.
+
+## Simplest regression
+
+- We consider now variables with $E(X_i) = 0$ and $E(Y_i) = 0$ 
+    - Simplifies calculations
+- As $E(Y_i) = \beta_0 +\beta_1 E(X_i)$
+- As $0 = \beta_0 +\beta_1 0 = \beta_0$
+
+- In this case the population equation has only one parameter $\beta_1$
+$$ Y_i  = \beta_1X_i + u_i$$
+
+## Estimator
+
+$X_i$ Uncorrelated with $u$
+
+- Assume that $X_i$ and $u$ are uncorrelated:
+- Then $$E[X_iu] = 0 = E[X_i(Y_i - \beta_1 X_i))] = E[X_iY_i] - \beta_1 E[X_i X_i] $$
+- solving for 
+$$\beta_1 = \frac{E[X_i Y_i]}{E[X_i X_i]} = \frac{\sigma_{XY}}{\sigma^2_{X}}$$
+- In the sample it can be shown that we have the corresponding equation:
+$$\hat\beta_1 = \frac{s_{XY}}{s^2_{X}} = \frac{\sum_i X_i Y_i }{\sum_i (X_i)^2}$$
+
+## Regression and correlation 
+
+- The correlation coefficient is just a rescaling of $\beta_1$
+$$\beta_1 = \frac{\sigma_{XY}}{\sigma^2_{X}} = \frac{\sigma_{XY}}{\sigma_{X}\sigma_{Y}} \frac{\sigma_{Y}}{\sigma_{X}} = \rho_{XY}\frac{\sigma_{Y}}{\sigma_{X}}$$
+
+- It can be shown that
+$$\rho_{XY}^2 = \frac{\beta_1^2 \sigma_{X}^2 }{\sigma_{Y}^2} = \frac{\beta_1^2 \sigma_{X}^2 }{\beta_1^2\sigma_{X}^2 + \sigma_{u}^2} = \frac{ESS }{TSS} = R^2$$
+
+- The correlation coefficient is the ratio of the explained variation to the total variation, i.e. the $R^2$!
+
+## Is $\hat\beta_1$ unbiased? {.smaller}
+
+- Rewriting
+$$\hat\beta_1  = \frac{\sum_i X_iY_i }{\sum_i X_i^2} = \frac{\sum_i X_i(\beta_1 X_i + u_i) }{\sum_i X_i^2}= \beta_1 + \frac{\sum_i X_i u_i }{\sum_i X_i^2}$$
+- If we assume that $E[u_i|X_i] = 0$, then: 
+$$E[\hat\beta_1|X_i] = E\left[ \beta_1 + \frac{\sum_i X_i u_i }{\sum_i X_i^2}|X_i\right] = \beta_1 + \frac{ E\left[\sum_i X_i u_i|X_i \right] }{\sum_i X_i^2} = \beta_1 + \frac{\sum_i X_i E\left[u_i|X_i \right] }{\sum_i X_i^2}$$
+
+## Variance of $\hat\beta_1$ 
+
+- We have 
+$$\hat\beta_1 - \beta_1 = \frac{\sum_i X_i u_i }{\sum_i X_i^2}$$
+- Thus 
+$$Var(\hat\beta_1) = E[(\hat\beta_1 - \beta_1)^2] = E\left[\frac{\sum_i X_i u_i }{\sum_i X_i^2}\frac{\sum_i X_i u_i }{\sum_i X_i^2}\right]  = E\left[\frac{\sum_i X_i^2 u_i^2 }{\left(\sum_i X_i^2\right)^2}\right]$$
+
+# Heteroscedasticity
+
+## Heteroscedasticity
+
+- Variability is often higher at higher values
+    - Same percentage variability
+- Does not affect estimate
+- Confidence intervals change
+    - Variance covariance is usually too low
+    - Often increased variability for $X_i$ far from mean
+        $\bar X$
+    - Variability at extremes results in more uncertainty than
+        variability at the mean
+
+## Homoscedasticity and estimate uncertainty {.smaller}
+
+- Assume that the variance of $u$ does not depend on $X$: $Var(u_i|X_i) = \sigma_u^2$ 
+- Thus 
+$$E\left[(\hat\beta_1 - \beta_1)^2 | X_i \right]  = E\left[ \frac{\sum_i X_i^2 u_i^2 }{\left(\sum_i X_i^2\right)^2}|X_i\right] = \frac{\sum_i X_i^2 E\left[u_i^2|X_i\right] }{\left(\sum_i X_i^2\right)^2} = \frac{ \sigma_u^2 }{\sum_i X_i^2}$$
+- Thus 
+$$Var(\hat \beta_1) = E((\hat\beta_1 - \beta_1)^2 ) = E\left( E\left[(\hat\beta_1 - \beta_1)^2 | X_i \right] \right) = E\left(\frac{ \sigma_u^2 }{\sum_i X_i^2} \right)= \frac{ \sigma_u^2 }{n \sigma_X^2}$$
+
+## Heteroscedasticity plots
+
+- Same data in both examples
+    - First and second half switch places
+- Notice larger uncertainty (gray area) in second figure
+    - Observations with $X_{i}$ far from mean $\bar X$ are more
+        influential
+    - Variability far from mean increases uncertainty more
+    
+------
+
+![](Figures/hetcenter.PNG)![](Figures/hetedges.PNG)
+
+## Residual plot in R
+
+- The post-estimation command `predict` generates a new variable
+
+```{r, echo=TRUE, comment=NA}
+caschool = read_rds(url("http://bjornerstedt.org/econometrics/caschool.rds"))
+reg = lm(testscr ~ str, data = caschool)
+plot(reg)
+```
+
+## Breusch-Pagan specification test
+
+- Estimate model
+    - Squared residuals $\hat u_{i}^2$ are generated
+- Regess to see if errors are linearly dependent on variables
+    $$\hat u_{i}^{2}=\alpha_{0}+\alpha_{1}X_{i}+v_{i}$$
+- test to see if $\hat \alpha_{1}=0$
+    - Null hypothesis is homoscedasticity 
+
+## Dealing with heteroscedasticity
+
+Estimate with _robust_ standard errors
+
+- Tends to give larger standard deviations
+- Better to be cautious...
+- Unfortunately robust is _not the default in R_
+- The `estimatr` package can be used
+    - Will also use the `huxtable` package for regression tables 
+
+## Robust estimate in R
+
+```{r, echo=TRUE, comment=NA}
+employment = read_rds(url("http://bjornerstedt.org/econometrics/employment_06_07.rds"))
+regw = lm(earnwke ~ age, data = employment )
+regwr = lm_robust(earnwke ~ age, data = employment )
+huxreg(standard = regw, robust = regwr)
+```
+
+# Hypothesis tests in regressions
+
+## Test scores regression {.smaller}
+
+```{r, echo=TRUE, comment=NA}
+caschool = read_rds(url("http://bjornerstedt.org/econometrics/caschool.rds"))
+regschool = lm_robust(testscr ~ str, data = caschool) 
+summary(regschool)
+```
+
+![](Figures/caschoolreg.png)
+
+## The variance covariance matrix  
+
+- The variance covariance matrix is given by the `vcov` function
+
+```{r, echo=TRUE, comment=NA}
+vcov(regschool)
+```
+
+- $\sqrt{0.2717424}=\hat\sigma_{\beta_1}=$ `r sqrt(0.2717424)` is the std. err for **str** 
+- off-diagonal terms are correlations between $\hat\beta_0$ and $\hat\beta_1$ 
+
+## Standard error of $\hat\beta_1$
+
+- Uncertainty in estimate $\hat\beta_1$ depends on three things
+    1. Variance $\sigma_u^2$ of unexplained variation $u$
+    2. Variance $\sigma_X^2$ of regressor $X$
+    3. Number of obserations $n$
+- Under homoscedasticity the relationship is simple
+$$\sigma_{\hat\beta_1}^2 = \frac{1}{n}\frac{\sigma_u^2}{\sigma_X^2}$$
+- More complicated under heteroscedasticity
+    - variation in $u$ depends on $X$
+    - Skip Key concept 4.4 p 177 and eq (5.4) p 194
+    
+## p-value and t-test
+
+- Individual significance
+- Standard errors $\sigma_{\beta_1}$
+    - Confidence intervals: $\hat\beta_1 \pm t_{\alpha/2}\hat \sigma_{\beta_1}$
+    - $t_{\alpha/2}$ is the critical value of a normal distribution for confidence level $\alpha$
+    - Usually 95% CI are calculated with $t_{\alpha/2}\approx 1.96$.
+- p-values - significantly different than zero at what level
+    - $\alpha$ at which $\beta_1$ is just significant
+- t-statistic - critical value giving significance:
+    $\frac{\beta_1}{\hat \sigma_{\beta_1}}$
+
+## Next lecture
+
+Chapter 6 - multivariate regression

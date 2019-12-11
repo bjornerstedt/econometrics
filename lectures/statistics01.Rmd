@@ -1,0 +1,270 @@
+---
+author: "Jonas Björnerstedt"
+title: "Probability and statistics"
+subtitle: "Probability theory"
+date: '`r Sys.Date()`'
+output:
+    ioslides_presentation:
+        css: slides.css
+        fig_width: 7
+        fig_height: 6
+    slidy_presentation: default
+    beamer_presentation:
+        theme: default
+runtime: shiny
+...
+```{r setup, include=FALSE}
+# knitr::opts_chunk$set(shinyPresentation = TRUE)
+library(tidyverse)
+library(knitr)
+set.seed(423)
+```
+
+# Introduction
+
+## Intro to Statistics overview
+
+- Two seminars
+- Not in exam
+  - But in econometrics exam! 
+- Exercise: https://rstudio.sh.se/rsconnect/statexercise/
+- Rstudio primer: https://rstudio.cloud/learn/primers
+
+## Textbook{.smaller}
+
+- Stock and Watson, Introduction to Econometrics, Updated third edition
+    -  Ch. 2. Review of Probability
+    -  Ch. 3. Review of Statistics
+
+```{r out.width = "50%", echo=FALSE}
+ include_graphics("Figures/StockWatson_cover2.png")
+```
+
+## Resources
+
+- Rstudio primer: https://rstudio.cloud/learn/primers
+- The internet!
+    - Wikipedia is very good in probability and statistics
+- [Khan academy](https://www.khanacademy.org/math/statistics-probability)
+    - From basic to advanced with [an app with videos and exercises](https://itunes.apple.com/us/app/khan-academy-you-can-learn/id469863705?mt=8)
+
+# Today's lecture
+
+## Lecture Content
+
+- Chapter 2
+    
+1. Economic Questions and Data
+2. Review of Probability
+
+Introduction to R...
+
+## Sampling Probability
+    
+- Probability
+    - Share of population with property
+    - Share of random sample - frequency of event
+- Population
+    - Example: Individuals in Sweden
+    - Can be abstract set of states 
+        - States of the world where a coin toss gives heads
+- Sample
+    - Draws of individuals from population
+    - Example: Class
+
+## Discrete random variable 
+
+- Finite discrete variable takes $k$ different values
+- Age or length of individuals in a class
+- Distribution can be characterized by the frequencies:
+    - Relative frequency of each age or length
+- Expected value:
+$$
+E[Y] = y_{1}p_{1}+y_{2}p_{2}+ \ldots +y_{n}p_{n} = \sum_{i=1}^{n}y_{i}p_{i}
+$$
+- Average population value if all have the same probability
+$$
+E[Y] = \sum_{i=1}^{n}y_{i}p_{i} = \sum_{i=1}^{n}y_{i}\frac{1}{n} = \frac{1}{n} \sum_{i=1}^{n}y_{i}
+$$
+
+## Coin toss
+
+- Coin toss has two outcomes (heads or tails)
+    - Assign a numerical value to each: -1, 1
+    - Equal probability of each outcome with a _fair coin_ 
+
+```{r, echo=FALSE, fig.height=3, fig.width==1}
+ggplot(tibble(x=c(-1,1), y=1/2), aes(x,y)) +
+    geom_bar(stat = "identity") + 
+    xlab("outcome") + ylab("probability") +
+    scale_x_continuous(breaks = c(-1,1))
+```
+
+## Discrete random variable - dice
+
+- A toss of a die can have various outcomes
+    - Sample space: {1, 2, 3, 4, 5, 6}
+- Each outcome occurs with equal probability
+    - Frequency with which we expect outcome
+- _Probability Mass Function (PMF)_ 
+    - function that assigns a _probability_ to each outcome in the sample space
+    
+```{r, echo=FALSE, fig.height=3}
+ggplot(tibble(x=1:6, y=1/6), aes(x,y)) +
+    geom_bar(stat = "identity") + 
+    xlab("outcome") + ylab("probability") +
+    scale_x_continuous(breaks = 1:6)
+```
+
+## Exercise 
+
+- Coin toss has two outcomes (heads or tails)
+    - Random variable taking values: -1, 1
+    - What is the expected value and variance?
+
+- Consider a random variable that assigns 0, 1 to outcomes
+    - What is the expected value and variance?
+
+## Continuous random variable
+
+- Many random variables are best seen as continuous
+    - Example: exact position of throwing darts
+    - Probability of an exact outcome is zero $Pr(X = 0.5)=0$
+- _Probability Density Function (PDF)_ describes probabilities
+    - Probability of an outcome is the _area_ under the PDF
+    - Probability of $X < 1$ is given by the red area
+        - In this case $Pr(X < 1)=1/2$
+    
+```{r , echo=FALSE, fig.height=3}
+dlnorm_shade = function(x) {
+    y=dlnorm(x)
+    y[x >1] <- NA
+    return(y)
+}
+ggplot(data.frame(X=0:5), aes(X)) +
+stat_function(fun=dlnorm_shade, color="red",geom = 'area', fill = 'red', alpha = 0.2) +
+stat_function(fun=dlnorm) +
+     labs(y = "Density") 
+```
+    
+## Probability and statistics
+    
+- Random variables
+    - Numerical properties of individuals
+    - Examples: height, weight and gender
+- Characterized by *probability distribution*
+    - Probability of each value that variable can take
+    - Example: frequencies of all lengths in population
+- Summarize with a *statistic*
+    - Real or vector valued _function_ of sample
+    - Random variable (it depends on a random sample)
+    - Sampling distribution of statistic?
+
+## Expected value 
+
+- A *Statistic* summarizes properties of distributions
+    - A real valued function of the probability distribution
+- If $X$ has a discrete distribution:
+    $$E(y)= \sum_i^k y_i p_i=\mu_y$$
+- For dice: 
+$$E(X)=1*\frac{1}{6}+2*\frac{1}{6}+3*\frac{1}{6}+4*\frac{1}{6}+5*\frac{1}{6}+6*\frac{1}{6}=3.5$$    
+- Populations often have equal weights
+    - Ex: The mean height of the Swedish population is just the average
+    - Sum the weights of everybody and divide by the number of people
+
+## Mean and median of distribution
+
+- _Mean_ - Average $X$ value 
+- _Median_ - $X$ with half of the density (area) to the left and right 
+    - Differs when distribution is not symmetric (skewed)
+    - Example income
+
+```{r , echo=FALSE, fig.height=5}
+dlnorm_shade = function(x) {
+    y=dlnorm(x)
+    y[x >1] <- NA
+    return(y)
+}
+ggplot(data.frame(X=0:5), aes(X)) +
+stat_function(fun=dlnorm_shade, color="red",geom = 'area', fill = 'red', alpha = 0.2) +
+stat_function(fun=dlnorm) +
+    geom_vline(aes(xintercept = exp(1/2),
+                 color="mean"))+
+    geom_vline(aes(xintercept = 1,
+                 color="median")) + 
+    labs(y = "Density") +
+  scale_color_manual(name = "statistics", values = c(median = "red", mean = "blue"))
+```
+
+## Some notation 
+
+There is some more or less standard notation used in the book. If $Y$ is a random variable
+
+- $\mu_Y = E(Y)$ - Expected value of $Y$
+- $\sigma^2_Y = Var(Y) = E((Y - \mu_Y)^2)$ - Variance of $Y$
+- $\sigma_Y = std.dev(Y) = \sqrt{Var(Y)}$ - Standard deviation of $Y$
+
+## Properties of expectations and variance
+
+- Expected value
+$$E(X + Y) = E(X) + E(Y)$$
+$$E(aX) = aE(X)$$
+- Variance:
+$$Var(aX) = E[(aX-E(aX))^2] = E[(aX-aE(X))^2] = E[a^2(X-E(X))^2]$$
+Thus
+$$Var(aX) = E[a^2(X-E(X))^2] = a^2E[(X-E(X))^2] = a^2 Var(X)$$
+
+# Statistics programs
+
+## Statistics programs - good / bad:
+
+- Stata - widely used, powerful, well documented / cost
+- R - common and free, developing quickly / more difficult
+- Gretl - free / limited functionality, small program 
+- SPSS - commercial, common in social sciences / menu oriented
+- Matlab/Mathematica - for advanced, powerful / costly and difficult
+    - Open source alternatives: Python/Julia
+- Others: SAS, EViews, Limdep, RATS, ...
+
+## Rstudio
+
+Rstudio like most statistic programs has
+
+- Windows 
+  - Many windows, each with tabs 
+  - Icons above each window
+- Menus 
+  - Many menus are for programming
+  - Most tasks performed with icons and menus above each window
+- Scripting language
+
+## Programming in R {.smaller}
+
+R can be used as a calculator
+
+```{r}
+2 + 2
+```
+
+Functions can be used:
+
+```{r}
+log(2 + 2)
+```
+
+R has variables that can be used to store things
+
+```{r}
+x <- log(2 + 2)
+x
+```
+
+## Next lecture
+
+Before next lecture: 
+
+- Do exercises 2.1 - 2.8 (pp 103 - 104)
+
+- Review probability!
+- Look at Chapter 3 in textbook
+- Look at R and Rstudio

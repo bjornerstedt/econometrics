@@ -1,0 +1,379 @@
+---
+author: "Jonas Björnerstedt"
+title: "Econometrics - Lecture 5"
+subtitle: "Linear Regression with Multiple Regressors"
+date: '`r Sys.Date()`'
+output:
+    ioslides_presentation:
+        css: slides.css
+runtime: shiny
+...
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(shinyPresentation = TRUE)
+library(tidyverse)
+library(stargazer)
+library(knitr)
+library(shiny)
+library(MASS)
+library(huxtable)
+set.seed(423)
+```
+
+## Lecture Content
+
+Chapter 6. Linear Regression with Multiple Regressors  
+
+## Multivariate regression
+
+- Linear Regression with Multiple Regressors  
+
+- Allow $k$ regressors $X_1, X_2, \ldots,X_k$
+    - Estimate $k+1$ parameters $\beta_0, \beta_1, \beta_2, \ldots,\beta_k$
+    - Two subscripts are now needed for sample: $X_{1i}$, $X_{2i}$, $X_{ki}$
+- In lecture we focus on 2 regressors $X$ and $W$
+    - See textbook for $k$ regressors
+
+## Why control variables?
+
+If we just want to see how $Y_i$ depends on $X_i$, why add variable $W_i$ to the regression?!
+
+1. Correlation between $X_i$ and omitted variables
+    - reduce _omitted variable bias_
+2. Reduce uncertainty
+    - Reduce unexplained variation $u_i$
+    - Tighter confidence intervals on parameters of interest
+
+Variables $X_2,...,X_k$ are _control variables_
+
+## Specification
+    
+- Linear model
+$$E(Y_i|X_i, W_i) = \beta_{0}+\beta_{1}X_i +
+\beta_{2}W_i$$
+- Sample data
+$$Y_i=\beta_{0}+\beta_{1}X_{i}+
+\beta_{2}W_{i}+u_i$$
+- Estimate will give $\widehat\beta_{0},\widehat\beta_{1},\widehat\beta_{2}$ and $\widehat u_i$
+$$Y_i=\widehat\beta_{0}+\widehat\beta_{1}X_{i}+
+\widehat\beta_{2}W_{i}+\widehat u_i$$
+
+## Linear relationship with 2 vars
+<div class="columns-2">
+![](Figures/linrel.PNG)
+
+- With two independent vars, the following relationship is a plane
+    $$Y_i = 0.5 X_i - 0.1 W_i$$
+    - For every $X_i$ and $W_i$ there is a unique $Y_i$
+- $\beta_0$ is where plane crosses $Y$ axis
+- $\beta_1,\beta_2$ is the slope in $X$ and $W$ directions
+</div>
+
+## The OLS estimator in multiple regression
+- The OLS estimator:
+$$ Y_i = \widehat\beta_{0} + \widehat\beta_{1} X_{i} + \widehat\beta_2 W_{i} + \widehat u_i$$
+- Find $\widehat\beta_0,\widehat\beta_1,\widehat\beta_2$ that minimize
+$$SSR = \sum_{i=1}^n \widehat u_i^2$$
+
+## Regression residual
+
+- Residual has variance
+$$\widehat\sigma_u^{2}=\frac{1}{n-3}\sum_{i=1}^{N} \widehat u_{i}^{2}=\frac{SSR}{n-3}$$
+
+- Degrees of freedom: $n-3$
+    - We have estimated 3 parameters $\hat\beta_0, \hat\beta_1, \hat\beta_2$
+
+## Degrees of freedom
+
+- Estimating the average $\bar Y$ with one observation ($n=1$) gives zero variance
+    - The average $\bar Y = Y_1$ 
+- Estimating $E(Y|X) = \beta_0 + \beta_1 X$ with two observations also gives perfect fit
+- With $X,W$ and 3 parameters $\beta_0$, $\beta_1$ and $\beta_2$ three observations ($n = 3$) are fit perfectly
+- Degrees of freedom adjustment compensates for this 
+
+## Adjusted $R^{2}$
+
+- Adding regressors always increases $R^{2}$
+- Better measure Adjusted $\bar{R}^{2}$
+$$\bar{R}^{2}=1-\frac{SSR/\left(n-k\right)}{TSS/\left(n-1\right)}$$
+    - Adjusted by degrees of freedom $n-k$, where $k$ is the number of parameters $\beta$
+- Adding parameters can decrease $\bar{R}^{2}$ if $SSR$ only decreases a little
+
+# Multicollinearity
+
+## Correlation between random variables
+
+- Positive, zero and negative correlation
+
+<img src="Figures/errcorr.PNG" alt="Drawing" style="width: 350px;"/>
+<img src="Figures/errcorrneg.PNG" alt="Drawing" style="width: 350px;"/>
+
+## Linear relationship with 2 vars
+<div class="columns-2">
+
+<img src="Figures/linrel.PNG" alt="Drawing" style="width: 400px;"/>
+
+- With two independent vars, the following relationship is a plane
+    $$Y=-0.1 X + 0.5 W$$
+    - For every $X$ and $W$ there is a unique $Y$
+    - $\beta_0$ is intercept and $\beta_1,\beta_2$ are the slopes 
+
+</div>
+
+## Standard error with 2 vars
+
+- Small variance in $u_i$ and large in $X_i$ and $W_i$
+
+![](Figures/nomulticollin.PNG)
+
+## Multicollinearity
+
+- Many planes fit data almost as well
+
+![](Figures/highmulticollin.PNG)
+
+## Near perfect Multicollinearity
+
+- Detection
+    - low individual significance
+    - despite high joint significance
+- More data needed!
+- Does not cause any problems except for identifying single parameters
+- Do not ’solve’ by dropping a parameter if it should be included
+    - Omitted variable bias - next section
+- Conceptual problem in model?
+    - Are the variables capturing the same effect?
+    - How do we interpret the coefficients?
+    - Not a technical problem
+
+## Perfect Multicollinearity
+
+- _Dummy variable trap_
+- Regress on constant variable
+    - Impossible to separate the effect of intercept from variable
+    - Stata automatically drops a variable
+- Intercept is calculating by adding variable $X_0 = 1$
+    - Makes algebra for solving simpler 
+    - Also facilitates understanding perfect multicollinearity
+- A column cannot be just a linear combination of other columns
+
+## Least squares assumptions
+- Assumption 1: The conditional mean of $u$ is zero
+    - $E(u_i|X_{i},W_{i}) = 0$
+- Assumption 2: Observations are IID
+    - $(Y_i,X_{i},W_{i})$ and $(Y_j,X_{j},W_{j})$ are independenty
+- Assumption 3: Large outliers are unlikely
+    - To estimate variance
+- Assumption 4: No perfect multicollinearity
+    - Same regressors: including both men and women dummy vars
+    - Insufficient variation in data
+    
+- The distribution of OLS estimators is jointly normal in large samples
+
+# Omitted variable bias
+
+## Omitted variables
+
+- Assume
+$$E(Y_i|X_i,W_i) = \beta_{0}+\beta_{1}X_i+
+\beta_{2}W_i$$
+
+- What happens if only one variable is included in the regression?:
+$$Y_i = \beta_{0} + \beta_{1}X_{i} + u_i$$
+
+- $u_i$ can be thought of as the sum of all variables affecting $Y_i$
+    - The effect of variation in $W_i$ will be in $u_i$
+    - Note that if $W$ does not vary, it will be incorporated in $\beta_0$
+    - Thus both the intercept and the error term contain the effect of _everything else_ on $Y$
+
+## Definition of omitted variable bias
+
+If $W_i$ is not included, we get _omitted variable bias_ if
+
+1. $X_i$ and $W_i$ are correlated
+2. $W_i$ is a determinant of $Y_i$
+
+- Equation (6.1) on page 231 is not very intuitive
+
+## Omitted variable bias
+
+- If $X_i$ and $W_i$ are correlated, then $\delta_1 \neq 0$ in
+$$W_i = \delta_0 + \delta_1 X_i + v_i$$
+
+- Substitute $W_i$ in the regression 
+$$Y_i = \beta_{0} + \beta_{1}X_{i} + \beta_{2}\overset{W_i}{\overbrace{\big(\delta_0 +\delta_1 X_i + v_i\big)}}+ u_i$$ 
+
+- Rearrange 
+$$Y_i = (\beta_{0} + \beta_{2}\delta_0) + (\beta_{1} +\beta_{2}\delta_1) X_i + (\beta_{2}v_i+ u_i)$$ 
+
+## Omitted variable bias
+
+- Estimating the relationship between only $X$ and $Y$ does not estimate $\beta_1$!
+$$Y_i = (\beta_{0} + \beta_{2}\delta_0) + (\beta_{1} +\beta_{2}\delta_1) X_i + (\beta_{2}v_i+ u_i)$$ 
+We get a bias
+$$\beta_1 \neq \beta_1 + \delta_1\beta_2 $$
+
+- The bias of this estimate depends on the sign and magnitudes of $\delta_1$ and $\beta_2$.
+- The estimate is _inconsistent_
+  - increasing the sample size just improves the estimates of $\delta_1$ and $\beta_2$
+
+## Application to the test scores data
+
+- Omitted variable
+
+```{r warning=FALSE, echo=TRUE}
+library(estimatr)
+library(tidyverse)
+caschool = read_rds(url("http://bjornerstedt.org/econometrics/caschool.rds"))
+
+# Regression with both
+rboth = lm( testscr ~ str + el_pct, data = caschool)
+# Regression omitting el_pct
+rstr = lm( testscr ~ str, data = caschool )
+# How does el_pct depend on str?:
+re = lm( el_pct ~ str, data = caschool )
+```
+
+## Test scores - Omitted variable equation{.small}
+
+```{r}
+huxreg(testscr=rboth, testscr=re, el_pct=rstr, omit_coefs = "(Intercept)", stars = NULL,statistics = character(0), error_format = '')
+```
+
+- Omitted variable equation $E(\hat\beta_1) = \beta_1 + \delta_1\beta_2$
+
+```{r, echo=TRUE, comment=NA}
+rboth$coefficients["str"] + re$coefficients["str"]*rboth$coefficients["el_pct"]
+```
+
+## Tradeoff bias and precision {.smaller}
+
+```{r, echo = FALSE}
+shinyApp(
+    ui = fluidPage(
+        sidebarLayout(
+            mainPanel(
+                verbatimTextOutput("summary")
+            ),
+            sidebarPanel(
+                sliderInput("corr", label = "Correlation:",
+                            min = -1, max = 1, value = 0, step = .2),
+                sliderInput("coef", label = "W coefficient:",
+                            min = 0, max = 1, value = 0, step = .1),
+                sliderInput("sd", label = "SD:",
+                            min = .2, max = 4, value =.2, step = .2),
+                actionButton("update33", "Change")
+            )
+        )     
+    ),
+    server = function(input, output) {
+        terms <- reactive({
+            # Change when the "update" button is pressed...
+            input$update33
+        })
+        
+        output$summary <- renderPrint({
+            terms()
+            points = 50
+            dcorr = input$corr
+            dcoef = input$coef
+            dsd = input$sd
+            # dcorr = 0
+            # dcoef = 1
+            # dsd = .5 
+            
+            d = mvrnorm(n = points, c(0, 0), matrix(c(1, dcorr, dcorr, 1), nrow = 2, ncol = 2))
+            data = tibble()
+            df <- tibble(X=d[,1], W=d[,2], Y = X + 1 + dcoef * W + 
+                                 dsd * rnorm(points))
+            m = lm(Y ~ X + W, df)
+            # pander(m )
+            m2 = lm(Y ~ X, df)
+            
+            stargazer(m , m2, type = 'text', model.numbers = FALSE, colnames = FALSE,
+                      dep.var.labels.include = FALSE, dep.var.caption = "", nobs = FALSE,
+                      omit.stat=c("f"), notes.append = FALSE
+            )
+        })
+  }
+)
+```
+
+## Omitted variable - Correlation
+
+Inclusion/omission of $W$ depends on correlation and on whether it is in the population equation.
+
+Correlation $X_i$ and $W_i$         | $\beta_W$        | Included     | Omitted   
+------------ | ---| ----------- | --------------
+Uncorrelated | $\beta_W = 0$ |  | 
+Correlated   | $\beta_W = 0$    |  More uncertain | 
+Uncorrelated | $\beta_W \neq 0$ | | More uncertain  
+Correlated   | $\beta_W \neq 0$ |  | __Biased and Inconsistent__
+
+# Monte Carlo
+
+## Monte Carlo - correlated varaiables
+
+- Generate $X$ and $W$ as independent random normal variables
+- Correlated in sample despite being independent in population
+
+```{r, echo=TRUE, eval=FALSE}
+    X = rnorm(100)
+    W = rnorm(100)
+    ggplot() + aes(X, W) + geom_point()
+    cor(X, W)
+```
+    
+## Regression with uncorrelated regressors
+
+- Population equation: $E(Y_i|X_i,W_i) = 1 + X_i + W_i$
+- Omitting $W$ tends to increase variance
+    - Larger unexplained variation
+    
+```{r, echo=TRUE, eval=FALSE}
+    X = rnorm(100)
+    W = rnorm(100)
+    u = rnorm(100)
+    # Population equation:
+    Y = 1 + 2*X + 3*W + u
+    lm(Y ~ X + W)
+    lm(Y ~ X)
+```
+
+## Regression with unnecessesary regressor
+
+- Population equation: $E(Y_i|X_i,W_i) = 1 + 2X_i$
+- Including $W_i$ tends to increase variance
+
+```{r, echo=TRUE, eval=FALSE}
+    X = rnorm(100)
+    W = rnorm(100)
+    u = rnorm(100)
+    # Population equation:
+    Y = 1 + 2*X + u
+    lm(Y ~ X + W)
+    lm(Y ~ X)
+```
+
+## Regression with correlated regressor
+
+- Population equation: $E(Y_i|X_i,W_i) = 1 + 2X _i + 3W_i$
+- Excluding $W_i$ results in bad estimate of the parameter of $X_i$
+    - When $X_i$ increases, $W_i$ also tends to increase (because they are correlated)
+    - The increase in $Y_i$ due to a larger $X_i$ and $W_i$ will all be attributed to $X_i$ if $W_i$ is not included in the regression
+
+```{r, echo=TRUE, eval=FALSE}
+    X = rnorm(100)
+    # Let W be almost identical to X, with just a little noise:
+    W = X + 0.1 * rnorm(100)
+    u = rnorm(100)
+    # Population equation:
+    Y = 1 + 2*X + 3*W + u
+    lm(Y ~ X + W)
+    lm(Y ~ X)
+```
+
+## Next lecture
+
+- Chapter 7: Hypothesis tests

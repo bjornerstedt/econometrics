@@ -1,0 +1,548 @@
+---
+title: "Probability and statistics"
+author: "Jonas Björnerstedt"
+subtitle: "Statistics"
+date: '`r Sys.Date()`'
+output:
+  ioslides_presentation:
+    css: slides.css
+  beamer_presentation:
+    theme: default
+runtime: shiny
+...
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(tidyverse)
+library(knitr)
+library(shiny)
+library(grid)
+library(gridExtra)
+set.seed(423)
+```
+
+## Lecture Content
+
+- Chapter 3
+- More about R 
+
+Estimation in increasing complexity is presented in chapters:
+
+- Ch 3. Estimation of population mean of $Y$
+    - Today's lectsure - the basic intuition 
+- Ch 4. Estimation of relationship between $X$ and $Y$
+    - Univariate regression
+- Ch 6. Estimation of relationship between $X_1,..,X_k$ and $Y$
+    - Multivariate regression
+        
+## Statistics
+
+- _Probability theory_ - \Given probability distributions what can we say about draws? 
+- _Statistics_ - What can we infer about population distribution $P(Y)$ from sample?
+
+- _Estimator_ 
+    - function of the data sample
+        - a random variable!!
+    - an estimator is a _statistic_
+    - Often intended to describe a property of the population
+        - Ex: expected value $E(Y)$ or variance $Var(Y)$
+
+## Estimating the expected value
+
+- Estimate the expected value of random variable $Y$
+- Assume that we can take a sample of size $n$ of $Y$
+$$Y_1,Y_2,Y_3,...Y_n$$
+    - Independent and Identically Distributed (IID) draws
+- Consider two estimators of the population mean $\mu_Y$
+    1. Sample mean: $\bar Y=\frac{1}{n}\sum_{i=1}^n Y_i$
+    1. First observation of sample: $Y_1$
+    
+## Coin toss example
+
+- A _fair coin_ has equal probability of heads and tails
+- How do we deterimine if a coin is fair?
+
+> 1. Toss the coin many times 
+> 1. Assign 1 if outcome is heads and -1 if tails 
+> 1. Take the average
+> 1. Check if the average is close to zero
+
+> - But how can be sure it is fair if for example the average is 0.1 instead of zero?
+>   - How sure are we?
+
+# Tests
+
+## Expected value and average
+
+- What is the relationship between the expected value in the population and sample means taken from the population?
+- Can we say how close the average height of 100 randomly sampled people is to the mean value in the population (the expected value)?
+- Two approaches:
+  - Calculate the distribution of the mean 
+  - The Central Limit Theorem (CLT)
+
+## Design of a test
+
+- Select a _null hypothesis_ $H_0$
+- Create a statistic with a known distribution under $H_0$
+- Calculate the value of this statistic for the data
+- Determine the probability of actual outcome (or worse) occuring assuming $H_0$
+- Reject $H_0$ if the probability of the actual outcome occurring is below a chosen critical level
+
+## Exact distribution
+
+* If we know the distribution of the random variable $X$, we can calculate the distribution of $\bar X$
+  * Binomial distribution of fair coin
+  * Normal distribution
+* Given this calculated distribution, we can see how likely the mean in our sample is
+* Reject $H_0$ if it is _very_ unlikely (given some choice of threschhold)
+
+## Coin toss average - distribution
+
+```{r , echo=FALSE}
+inputPanel(
+  sliderInput("drawsb", label = "Draws:",
+              min = 1, max = 50, value = 1, step = 1)
+)
+renderPlot({
+    d = input$drawsb
+x = -1 + 0:d * 2/ d
+y = dbinom(0:d, d, 1/2)
+ggplot(data.frame(x,y), aes(x, y)) +
+    geom_bar(stat = "identity") +
+    labs( x = bquote(bar(Y)), y = "probability")
+})
+```
+
+## Almost normal distribution
+
+```{r , echo=FALSE}
+inputPanel(
+  sliderInput("drawsa", label = "Draws:",
+              min = 1, max = 50, value = 1, step = 1)
+)
+renderPlot({
+    d = input$drawsa
+x = -1 + 0:d * 2/ d
+y = dbinom(0:d, d, 1/2)
+ggplot(data.frame(x,y), aes(x, y)) +
+    geom_bar(stat = "identity") +
+    stat_function(fun=function(x){dnorm(x, sd=sqrt(1/d))*2/d}, color="red") +
+    labs( x = bquote(bar(Y)), y = "probability")
+
+})
+```
+
+## Central Limit Theorem (CLT)
+
+- Properties of random samples
+
+- Central Limit Theorem (CLT)
+    - Take average of independent random draws
+    - Draws can have (almost) any distribution
+    - Large sample imply that estimates are almost normal
+
+- Normal distributions are characterized by mean and variance
+    - Thus focus is on the correctness of these statistics
+
+- Bias for estimate
+- Consistency (asymptotic bias)
+- For CI and hypothesis tests variance estimate is important
+
+
+## Tests
+
+- Two types of tests
+1. Hypothesis tests - test restrictions on the parameters
+2. Specification tests - test that the model is correctly specified
+
+## Errors
+
+Two types of errors possible in hypothesis testing.
+
+- _Type 1 error_: Reject $H_0$ but it is true
+- _Type 2 error_: Do not reject $H_0$ but it is false
+
+## Fair coin plot
+
+ _p-value_ given by green areas
+ 
+```{r , fig.height = 3}
+prob = 0.05
+avnorm = function(x){dnorm(x,0,1/sqrt(20))}
+xval1 <- qnorm(prob/2,0,1/sqrt(20))
+xval2 <- qnorm(1-prob/2,0,1/sqrt(20))
+ggplot(data.frame(x=c(-1, 1)), aes(x)) +
+    stat_function(fun= avnorm, geom="line") +
+    geom_area(stat = "function", fun = avnorm, 
+        fill = "green", xlim = c( -1, xval1), alpha=0.3) +
+    geom_area(stat = "function", fun = avnorm, 
+        fill = "green", xlim = c( xval2, 1), alpha=0.3) +
+    labs(x="x", y="frequency", title="PDF") + 
+    geom_vline(xintercept = 0, color="blue") + 
+    geom_vline(xintercept = xval2, color="red") 
+
+```
+
+## Is a coin fair?
+
+- Assign 1 to head and -1 to tail
+- Under null hypothesis $H_0$ is fair $E(Y)=\mu_Y=0$ (blue line)
+    - Variance is known!: $Var(Y)=1$
+- With alternate hypothesis $H_1$ we have $E(Y)<0$ or $E(Y)>0$
+- What is the probability that a sample average $\bar Y$ is as far away as $\hat Y$ or more?
+    - Here estimate $\hat Y=0.4$ (red line)
+    - If $\hat Y=0.4$ is possible, then also $\hat Y=-0.4$ should be
+    - Called the _p-value_ (green areas)
+
+## Coin toss average - find distribution
+
+```{r}
+shinyApp(
+    ui = fluidPage(
+        sliderInput("drawsd", label = "Draws:",
+                    min = 10, max = 200, value = 10, step = 5),
+        plotOutput("distPlot")
+    ),
+    server = function(input, output) {
+        output$distPlot = renderPlot({
+            d = input$drawsd
+            x = -1 + 0:d * 2/ d
+            y = dbinom(0:d, d, 1/2)
+            ggplot(data.frame(x,y), aes(x, y)) +
+                geom_bar(stat = "identity") +
+                stat_function(fun=function(x){dnorm(x, sd=sqrt(1/input$drawsd))*2/input$drawsd}, color="red") +
+                labs( x = bquote(bar(Y)), y = "frequency")
+        })
+    }
+)
+```
+
+## Notation - population and sample
+
+There is some more or less standard notation used in the book. If $Y$ 
+and $Y$ are random variables
+
+Concept | Population | Sample
+------------------ | ---------------- | -----------
+Expected value / Mean | $\mu_Y = E(Y)$ | $\bar Y$
+Variance | $\sigma^2_Y = Var(Y)$ | $\hat\sigma^{2}_{Y} = s^{2}_{Y}$
+Standard deviation / error | $\sigma_Y$ | $se(Y) = s_{Y} = \hat\sigma_{Y}$
+
+- Called: 
+    - Standard deviation in population
+    - Standard error in sample
+
+## Notation - population and sample
+
+Population and sample definitions 
+
+Concept | Population | Sample
+------------------ | ---------------- | -----------
+Expected value | $\mu_Y = E(Y)$ | $\bar Y = \frac{1}{n}\sum_i Y_i$
+Variance | $\sigma^2_Y = E[(Y - \mu_Y)^2]$ | $s^{2}_{Y} = \frac{1}{n-1}\sum_i (Y_i - \bar Y)^2$
+Standard error | $\sigma_Y$ | $s_{Y} = se(Y) = \sqrt{\frac{1}{n-1}\sum_i (Y_i - \bar Y)^2}$
+
+# Asymptotic theory
+
+## Central limit theorem
+
+- Assume that $Y$ has mean $\mu_Y$ and variance $\sigma_Y$ 
+- Then for large $n$ the sample average $\bar Y$ has almost a normal distribution 
+$$N(\mu_Y, \sigma_Y^2/n)$$
+- As the sample variance $s_Y^2$ converges to the population variance $\sigma_Y^2$, we know approximately the distribution of the sample mean for large $n$.
+
+## Cumulative Density Function (CDF)
+
+- From $X$ to cumulative probability
+
+```{r , fig.height = 12, echo = FALSE}
+shinyApp(
+  ui = fluidPage(
+      sidebarLayout(
+          sidebarPanel(
+              sliderInput("level", label = "x value:",
+                  min = -4, max = 4, value = 0, step = .1)
+          ),
+          mainPanel(
+              plotOutput("cdfPlot")
+          )
+      )     
+  ),
+  
+  server = function(input, output) {
+    output$cdfPlot <- renderPlot({
+        xval <- input$level
+        p1= ggplot(data.frame(x=c(-4, 4)), aes(x)) +
+            stat_function(fun= pnorm, geom="line") +
+            labs(x="", y="probability", title="CDF") + 
+            geom_vline(xintercept = xval, color="red") + 
+            geom_hline(yintercept = pnorm(xval), color="red")
+        p2= ggplot(data.frame(x=c(-4, 4)), aes(x)) +
+            stat_function(fun= dnorm, geom="line") +
+            geom_area(stat = "function", fun = dnorm, 
+                fill = "green", xlim = c( -4, xval), alpha=0.3) +
+            labs(x="X", y="frequency", title="PDF") + 
+            geom_vline(xintercept = xval, color="red")
+        grid.arrange(p1, p2)
+    })
+  }
+)
+```
+
+## One tail test - critical level 
+
+- From precision goal to critical level
+
+```{r , fig.height = 12}
+shinyApp(
+  ui = fluidPage(
+      sidebarLayout(
+          sidebarPanel(
+              sliderInput("prob", label = "Probability:",
+                  min = 0, max = .1, value = 0.05, step = .01)
+          ),
+          mainPanel(
+              plotOutput("ciPlot")
+          )
+      )     
+  ),
+  
+  server = function(input, output) {
+    output$ciPlot <- renderPlot({
+        xval <- qnorm(input$prob)
+        p1= ggplot(data.frame(x=c(-4, 4)), aes(x)) +
+            stat_function(fun= pnorm, geom="line") +
+            labs(x="", y="probability", title="CDF") + 
+            geom_vline(xintercept = xval, color="red") + 
+            geom_hline(yintercept = pnorm(xval), color="red")
+        p2= ggplot(data.frame(x=c(-4, 4)), aes(x)) +
+            stat_function(fun= dnorm, geom="line") +
+            geom_area(stat = "function", fun = dnorm, 
+                fill = "green", xlim = c( -4, xval), alpha=0.3) +
+            labs(x="x", y="frequency", title="PDF") + 
+            geom_vline(xintercept = xval, color="red")
+        grid.arrange(p1, p2)
+    })
+  }
+)
+```
+
+## Two tail test - critical levels 
+
+- Probabily divided equally to low and high outcomes
+
+```{r , fig.height = 12}
+shinyApp(
+  ui = fluidPage(
+      sidebarLayout(
+          sidebarPanel(
+              sliderInput("prob2", label = "Probability:",
+                  min = 0, max = .1, value = 0.05, step = .01)
+          ),
+          mainPanel(
+              plotOutput("ci2Plot")
+          )
+      )     
+  ),
+  
+  server = function(input, output) {
+    output$ci2Plot <- renderPlot({
+        xval1 <- qnorm(input$prob2/2)
+        xval2 <- qnorm(1-input$prob2/2)
+        p1= ggplot(data.frame(x=c(-4, 4)), aes(x)) +
+            stat_function(fun= pnorm, geom="line") +
+            labs(x="", y="probability", title="CDF") + 
+            geom_vline(xintercept = xval1, color="blue") + 
+            geom_vline(xintercept = xval2, color="red") + 
+            geom_hline(yintercept = input$prob2/2, color="blue") +
+            geom_hline(yintercept = 1-input$prob2/2, color="red")
+        p2= ggplot(data.frame(x=c(-4, 4)), aes(x)) +
+            stat_function(fun= dnorm, geom="line") +
+            geom_area(stat = "function", fun = dnorm, 
+                fill = "green", xlim = c( -4, xval1), alpha=0.3) +
+            geom_area(stat = "function", fun = dnorm, 
+                fill = "green", xlim = c( xval2, 4), alpha=0.3) +
+            labs(x="x", y="frequency", title="PDF") + 
+            geom_vline(xintercept = xval1, color="blue") + 
+            geom_vline(xintercept = xval2, color="red") 
+        grid.arrange(p1, p2)
+    })
+  }
+)
+```
+
+# Simulation / Monte Carlo
+
+## Random draws
+
+* The function `sample(x, size, replace = FALSE, prob = NULL)` generates random draws
+
+```{r, echo=TRUE}
+y = sample(c(-1,1), 50, replace = TRUE)
+```
+
+## Monte Carlo coin tosses
+
+* Let $y$ be 50 tosses of a fair coin, with outcomes $y \in \{-1, 1\}$:
+
+```{r, echo=TRUE}
+y = sample(c(-1,1), 50, replace = TRUE)
+```
+
+* Use functions `mean` or `sum` to calculate average
+```{r, echo=TRUE}
+sum(y)/50
+mean(y)
+```
+
+
+## Calculate mean, variance and standard errors
+
+```{r, echo=TRUE}
+ymean = sum(y)/50
+ydiff = y - ymean
+yvar = sum(ydiff^2)/49
+ysd = sqrt(yvar)
+ymean
+yvar
+ysd
+```
+
+## Mean and and variance 
+
+If $Y$ has mean $\mu_Y$ and std. dev. $\sigma_Y$, then $t$ is approxaimately standard normal
+$$t = \frac{Y - \mu_Y}{\sigma_Y}$$
+
+```{r}
+df <- tibble(y = 2 * rnorm(15)+5, dens=dnorm(y, mean=5, sd=2))
+sidebarLayout(
+mainPanel(
+renderPlot({
+    tibble(Y = -3:5) %>% 
+        ggplot( aes(Y)) +
+        stat_function(fun=dnorm, args=list(mean=input$muPop, sd=input$sigmaPop), color="red") +
+        geom_vline(xintercept = 0) +
+        ylab("")
+
+})
+),
+    sidebarPanel(
+  sliderInput("muPop", label = "Mean:",
+              min = 0, max = 1.4, value = 1.4, step = .1),
+  sliderInput("sigmaPop", label = "Standard deviation:",
+              min = .2, max = 1, value = .7, step = .1)
+)
+)
+```
+
+## Normal CDF and inverse CDF in R 
+
+One tail test at 5% level, lower bound
+
+```{r, echo=TRUE}
+qnorm(0.05)
+
+# Going the other way
+pnorm(-1.64) 
+```
+
+The probability of $-1.96 \le t \le 1.96$ is 0.95
+
+```{r, echo=TRUE}
+pnorm(-1.96) + 1 - pnorm(1.96)
+
+```
+
+## t-statistic with estimated variance
+
+- Transform sample average to standard normal variable $t$: 
+$$t=\frac{\bar Y - \mu_{\bar Y}}{\hat\sigma_{\bar Y}}$$
+- See how far this variable is from 0. 
+- This statistic is called the t-statistic or t-ratio
+
+## t-distribution
+
+- Distribution with uncertain variance
+- If we know that Y has normal distribution
+- With uncertain variance the confidence interval has different distribution
+
+[Uncertain variance](https://xkcd.com/2110/)
+
+## t-statistic with unknown variance
+
+- True sample variance is usually not known. Estimate:
+$$s_Y^2=\frac{1}{n-1} \sum_{i=1}^n (Y_i - \bar Y)^2$$
+- Calculate the standard error of $\bar Y$:
+$$SE(\bar Y) = \hat\sigma_{\bar Y} = s_Y / \sqrt n$$
+- Calculate the t-ratio: 
+$$t=\frac{\bar Y - \mu_Y}{SE(\bar Y)}$$
+- Reject null hypothesis $H_0$ at 5 % level if $t>1.96$ 
+
+## Calculating p-value
+
+- Calculate t-ratio $\hat t$ for observed average $\hat Y$
+- How probable is a larger t-ratio in absolute terms?
+- The probability  $\hat p$ is given by $\hat p=2\Phi(\hat t)$, where $\Phi(t)$ is the cumulative distribution function of a standard normal distribution
+
+## Confidence interval
+
+- Consider all possible true values for the expected value $\mu_Y$ 
+- _Confidence interval:_ all values that cannot be rejected at the chosen confidence level (usually 5 %)
+- We want to find all $\mu$ with t-ratio $-1.96<t<1.96$:
+$$-1.96<\frac{\bar Y - \mu}{se(\bar Y)}<1.96$$
+- Solving for $\mu$ we get
+$$\bar Y - 1.96*se(\bar Y)< \mu<\bar Y + 1.96*se(\bar Y)$$
+
+## Important distributions
+
+If $X$ and $Y$ are independent standard normal vars
+
+- $e^X$ has *lognormal distribution*
+- $X^2$ has $\chi^2$ *distribution*, 1 degree of freedom
+    - $X^2+Y^2$ has $\chi^2$ *distribution*, 2 degrees of freedom
+- $\frac{X}{Y^2}$ has *t distribution*, 1 degree of freedom
+- $\frac{X^2}{Y^2}$ has *F distribution*, (1,1) degrees of freedom
+- $\frac{X}{Y}$ has *Cauchy distribution*
+
+## t distrubution
+
+```{r , echo=FALSE , fig.width = 4}
+inputPanel(
+  selectInput("dft", label = "Degrees of freedom:",
+              choices = c(5, 10, 20, 30, 40, 50), selected = 5)
+)
+
+renderPlot({
+    ggplot(data.frame(x=c(0, 3)), aes(x)) +
+        stat_function(fun = dnorm, geom="line") +
+        stat_function(fun = function(x)(dt(x, df=as.numeric(input$dft))), geom="line") +
+        labs(x="X", y="frequency") + theme(legend.title=element_blank()) +
+        geom_vline(xintercept = 0) + 
+        geom_hline(yintercept = 0)
+})
+```
+
+## Chi
+
+```{r , echo=FALSE , fig.width = 4}
+inputPanel(
+    sliderInput("level", label = "Critical level:",
+        min = 0, max = 10, value = 0, step = .1),
+  selectInput("df", label = "Degrees of freedom:",
+              choices = 1:10, selected = 1)
+)
+
+renderPlot({
+    ggplot(data.frame(x=c(0, 10)), aes(x)) +
+        stat_function(fun= function(x)(dchisq(x, df=as.numeric(input$df))/as.numeric(input$df)), 
+            geom="line") +
+        geom_area(stat = "function", 
+            fun = function(x)(dchisq(x, df=as.numeric(input$df))/as.numeric(input$df)), 
+            fill = "green", xlim = c( input$level, 10), alpha=0.3) +
+        labs(x="X", y="frequency") + theme(legend.title=element_blank()) +
+        geom_vline(xintercept = 0) + 
+        geom_hline(yintercept = 0)
+})
+```
+
+
