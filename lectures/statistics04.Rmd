@@ -4,6 +4,8 @@ title: "Econometrics - Lecture 4"
 subtitle: "Hypothesis Tests and Confidence Intervals"
 date: '`r Sys.Date()`'
 output:
+    slidy_presentation:
+        default
     ioslides_presentation:
         css: slides.css
 runtime: shiny
@@ -213,7 +215,7 @@ ggplot(employment_06_07, aes(female, earnwke)) +
 - Compare average for population and for female
 
 ```{r, echo=TRUE, eval=FALSE}
-employment = read_rds(url("http://bjornerstedt.org/econometrics/employment_06_07.rds"))
+employment = read_rds("../data/employment_06_07.rds")
 lm(earnwke~1, data = employment)
 summary(employment$earnwke)
 empf = filter(employment, female == 1)
@@ -320,7 +322,7 @@ $$Var(\hat \beta_1) = E((\hat\beta_1 - \beta_1)^2 ) = E\left( E\left[(\hat\beta_
 - The post-estimation command `predict` generates a new variable
 
 ```{r, echo=TRUE, comment=NA}
-caschool = read_rds(url("http://bjornerstedt.org/econometrics/caschool.rds"))
+caschool = read_rds("../data/caschool.rds")
 reg = lm(testscr ~ str, data = caschool)
 plot(reg)
 ```
@@ -347,7 +349,7 @@ Estimate with _robust_ standard errors
 ## Robust estimate in R
 
 ```{r, echo=TRUE, comment=NA}
-employment = read_rds(url("http://bjornerstedt.org/econometrics/employment_06_07.rds"))
+employment = read_rds("../data/employment_06_07.rds")
 regw = lm(earnwke ~ age, data = employment )
 regwr = lm_robust(earnwke ~ age, data = employment )
 huxreg(standard = regw, robust = regwr)
@@ -358,7 +360,7 @@ huxreg(standard = regw, robust = regwr)
 ## Test scores regression {.smaller}
 
 ```{r, echo=TRUE, comment=NA}
-caschool = read_rds(url("http://bjornerstedt.org/econometrics/caschool.rds"))
+caschool = read_rds("../data/caschool.rds")
 regschool = lm_robust(testscr ~ str, data = caschool) 
 summary(regschool)
 ```

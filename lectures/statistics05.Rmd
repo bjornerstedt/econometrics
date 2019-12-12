@@ -4,6 +4,8 @@ title: "Econometrics - Lecture 5"
 subtitle: "Linear Regression with Multiple Regressors"
 date: '`r Sys.Date()`'
 output:
+    slidy_presentation:
+      default
     ioslides_presentation:
         css: slides.css
 runtime: shiny
@@ -88,7 +90,9 @@ $$\widehat\sigma_u^{2}=\frac{1}{n-3}\sum_{i=1}^{N} \widehat u_{i}^{2}=\frac{SSR}
 
 - Estimating the average $\bar Y$ with one observation ($n=1$) gives zero variance
     - The average $\bar Y = Y_1$ 
+    - Variance can only be estimated with 2 observations
 - Estimating $E(Y|X) = \beta_0 + \beta_1 X$ with two observations also gives perfect fit
+  - Three observations needed to estimate variance
 - With $X,W$ and 3 parameters $\beta_0$, $\beta_1$ and $\beta_2$ three observations ($n = 3$) are fit perfectly
 - Degrees of freedom adjustment compensates for this 
 
@@ -225,7 +229,7 @@ $$\beta_1 \neq \beta_1 + \delta_1\beta_2 $$
 ```{r warning=FALSE, echo=TRUE}
 library(estimatr)
 library(tidyverse)
-caschool = read_rds(url("http://bjornerstedt.org/econometrics/caschool.rds"))
+caschool = read_rds("../data/caschool.rds")
 
 # Regression with both
 rboth = lm( testscr ~ str + el_pct, data = caschool)
